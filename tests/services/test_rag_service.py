@@ -1,9 +1,11 @@
 import pytest
 from app.services.rag_service import RAGService
+from langchain_community.embeddings import FakeEmbeddings
 
 @pytest.fixture
 def rag_service():
-    return RAGService()
+    fake_embeddings = FakeEmbeddings(size=384)
+    return RAGService(embedding_function=fake_embeddings, persist_directory=None)
 
 async def test_ask_question_returns_string(rag_service):
     query = "Who killed Laura Palmer?"
