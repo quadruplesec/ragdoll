@@ -5,3 +5,9 @@ class AskRequest(BaseModel):
 
 class AskResponse(BaseModel):
     answer: str
+
+class IngestRequest(BaseModel):
+    text: str
+
+class IngestResponse(BaseModel):
+    status: str
