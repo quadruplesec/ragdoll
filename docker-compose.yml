@@ -7,7 +7,7 @@ services:
     volumes:
       - .:/app
     environment:
-      - LLM_PROVIDER=ollama
+      - LLM_PROVIDER=${LLM_PROVIDER:-ollama}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}

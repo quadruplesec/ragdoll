@@ -15,7 +15,7 @@ def get_llm(provider: str, **kwargs):
         return ChatAnthropic(model=model, **kwargs)
 
     elif provider == "google":
-        model = kwargs.pop("model", "gemini-1.5-flash")
+        model = kwargs.pop("model", "gemini-3.8-flash")
         return ChatGoogleGenerativeAI(model=model, **kwargs)
 
     elif provider == "ollama":
