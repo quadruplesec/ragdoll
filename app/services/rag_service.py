@@ -1,8 +1,12 @@
+import os
+
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_classic.chains.retrieval_qa.base import RetrievalQA
 from langchain_community.llms.fake import FakeListLLM
+
+from app.core.llm_factory import get_llm
 
 
 class RAGService:
@@ -14,7 +18,11 @@ class RAGService:
             persist_directory=persist_directory
         )
 
-        self.llm = llm or FakeListLLM(responses=["We all killed Laura Palmer (I'm a mock!)"])
+        if llm:
+            self.llm = llm
+        else:
+            provider = os.getenv("LLM_PROVIDER", "ollama")
+            self.llm = get_llm(provider)
 
         self.qa_chain = RetrievalQA.from_chain_type(
             llm=self.llm,

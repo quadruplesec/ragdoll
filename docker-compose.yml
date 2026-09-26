@@ -6,4 +6,9 @@ services:
       - "8000:8000"
     volumes:
       - .:/app
+    environment:
+      - LLM_PROVIDER=ollama
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
