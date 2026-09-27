@@ -6,8 +6,10 @@ from app.api.dependencies import get_rag_service
 client = TestClient(app)
 
 class MockRAGService:
-        async def ask_question(self, query: str):
-            return "I am dead yet I live."
+        async def stream_question(self, query: str):
+            tokens = ["I ", "am ", "dead ", "yet ", "I ", "live."]
+            for token in tokens:
+                yield token
 
 @pytest.fixture
 def mock_rag_service():
@@ -20,4 +22,7 @@ def test_ask_endpoint_success(mock_rag_service):
     response = client.post("/ask", json=payload)
 
     assert response.status_code == 200
-    assert response.json() == {"answer": "I am dead yet I live."}
+    assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
+
+    expected_output = "data: I \n\ndata: am \n\ndata: dead \n\ndata: yet \n\ndata: I \n\ndata: live.\n\n"
+    assert response.text == expected_output

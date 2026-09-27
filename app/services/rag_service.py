@@ -3,8 +3,9 @@ import os
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_classic.chains.retrieval_qa.base import RetrievalQA
-from langchain_community.llms.fake import FakeListLLM
+from langchain_core.prompts import PromptTemplate
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.output_parsers import StrOutputParser
 
 from app.core.llm_factory import get_llm
 
@@ -24,15 +25,30 @@ class RAGService:
             provider = os.getenv("LLM_PROVIDER", "ollama")
             self.llm = get_llm(provider)
 
-        self.qa_chain = RetrievalQA.from_chain_type(
-            llm=self.llm,
-            chain_type="stuff",
-            retriever=self.vectorstore.as_retriever()
+        prompt = PromptTemplate.from_template("""
+Use the following pieces of retrieved context to answer the question.
+Context: {context}
+Question: {question}
+Answer:
+"""
+        )
+
+        def format_docs(docs):
+            return "\n\n".join(doc.page_content for doc in docs)
+
+        self.qa_chain = (
+            {"context": self.vectorstore.as_retriever() | format_docs, "question": RunnablePassthrough()}
+            | prompt
+            | self.llm
+            | StrOutputParser()
         )
 
     async def ask_question(self, query: str) -> str:
-        response = await self.qa_chain.ainvoke({"query": query})
-        return response["result"]
+        return await self.qa_chain.ainvoke(query)
+
+    async def stream_question(self, query: str):
+        async for chunk in self.qa_chain.astream(query):
+            yield chunk
 
     async def ingest_text(self, text: str) -> dict:
         chunks = self.text_splitter.split_text(text)
