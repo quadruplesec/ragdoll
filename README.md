@@ -1,7 +1,6 @@
 # Ragdoll
 
-[![Run Unit Tests](https://github.com/quadruplesec/ragdoll/actions/workflows/test.yaml/badge.svg)](https://github.com/quadruplesec/ragdoll/actions)
-[![Build and Release](https://github.com/quadruplesec/ragdoll/actions/workflows/release.yaml/badge.svg)](https://github.com/quadruplesec/ragdoll/actions)
+[![CI Pipeline](https://github.com/quadruplesec/ragdoll/actions/workflows/ci.yml/badge.svg)](https://github.com/quadruplesec/ragdoll/actions/workflows/ci.yml)
 [![Python Version](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![React Version](https://img.shields.io/badge/react-18.3+-blue.svg)](https://react.dev/)
 [![License](https://img.shields.io/github/license/quadruplesec/ragdoll)](https://github.com/quadruplesec/ragdoll/blob/main/LICENSE)
