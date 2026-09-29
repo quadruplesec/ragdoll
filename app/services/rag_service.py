@@ -130,6 +130,7 @@ Answer:
                         text += page_text + "\n"
             except Exception:
                 yield json.dumps({"step": "error", "status": "Corrupted or invalid PDF file.", "progress": 0})
+                return
 
         else:
             yield json.dumps({"step": "parse", "status": "Reading text file...", "progress": 30})

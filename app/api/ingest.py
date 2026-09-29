@@ -14,7 +14,15 @@ async def ingest_document_endpoint(
     result = await rag_service.ingest_text(request.text)
     return IngestResponse(status=result["status"])
 
-@router.post("/ingest/file")
+@router.post(
+    "/ingest/file",
+    responses={
+        200: {
+            "description": "Server-Sent Events stream providing ingestion progress.",
+            "content": {"text/event-stream": {}}
+        }
+    }
+)
 async def ingest_file_endpoint(
     file: UploadFile = File(...),
     rag_service: RAGService = Depends(get_rag_service)
