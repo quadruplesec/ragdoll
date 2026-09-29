@@ -17,3 +17,13 @@ services:
       - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3}
       - KNOWLEDGE_BASE_DESCRIPTION=${KNOWLEDGE_BASE_DESCRIPTION:-private documents and domain-specific knowledge}
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+  
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: dockerfile
+    container_name: ragdoll-ui
+    ports:
+     - "5173:80"
+    depends_on:
+      - api
