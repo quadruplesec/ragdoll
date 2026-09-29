@@ -1,4 +1,4 @@
-import { IngestionState } from "../types";
+import type { IngestionState } from "../types";
 
 export async function* streamChat(query: string): AsyncGenerator<string, void, unknown> {
     const response = await fetch('/api/ask', {
