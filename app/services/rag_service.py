@@ -1,13 +1,13 @@
 import os
-
 from operator import itemgetter
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.prompts import PromptTemplate
-from langchain_core.runnables import RunnableBranch
+from langchain_core.runnables import RunnableBranch, RunnableLambda
 from langchain_core.output_parsers import StrOutputParser
-
+from langchain_community.retrievers import BM25Retriever
+from langchain_classic.retrievers import EnsembleRetriever
 from app.core.llm_factory import get_llm
 
 
@@ -19,6 +19,15 @@ class RAGService:
             embedding_function=self.embeddings,
             persist_directory=persist_directory
         )
+
+        existing_data = self.vectorstore.get()
+        existing_docs = existing_data.get("documents", [])
+
+        if existing_docs:
+            self.keyword_retriever = BM25Retriever.from_texts(existing_docs)
+            self.keyword_retriever.k = 4
+        else:
+            self.keyword_retriever = None
 
         if llm:
             self.llm = llm
@@ -40,6 +49,16 @@ class RAGService:
         self.classifier_prompt = PromptTemplate.from_template(prompt_text)
         self.classifier_chain = self.classifier_prompt | self.llm | StrOutputParser()
 
+        def dynamic_retriever(query: str):
+            dense_retriever = self.vectorstore.as_retriever(search_kwargs={"k": 4})
+            if self.keyword_retriever:
+                ensemble = EnsembleRetriever(
+                    retrievers=[dense_retriever, self.keyword_retriever],
+                    weights=[0.5,0.5]
+                )
+                return ensemble.invoke(query)
+            return dense_retriever.invoke(query)
+
         rag_prompt = PromptTemplate.from_template(
             "Use the following pieces of retrieved context to answer the question.\n\nContext: {context}\n\nQuestion: {query}\n\nAnswer:"
         )
@@ -48,7 +67,7 @@ class RAGService:
             return "\n\n".join(doc.page_content for doc in docs)
 
         rag_chain = (
-            {"context": itemgetter("query") | self.vectorstore.as_retriever() | format_docs, "query": itemgetter("query")}
+            {"context": itemgetter("query") | RunnableLambda(dynamic_retriever) | format_docs, "query": itemgetter("query")}
             | rag_prompt
             | self.llm
             | StrOutputParser()
@@ -74,7 +93,7 @@ Answer:
 
     async def classify_query(self, query: str) -> str:
         result = await self.classifier_chain.ainvoke({"query": query})
-        return result.strip().upper()
+        return result.strip().upper().replace("*", "").replace(".","")
 
     async def ask_question(self, query: str) -> str:
         classification = await self.classify_query(query)
@@ -88,4 +107,7 @@ Answer:
     async def ingest_text(self, text: str) -> dict:
         chunks = self.text_splitter.split_text(text)
         self.vectorstore.add_texts(texts=chunks)
+        all_docs = self.vectorstore.get()["documents"]
+        self.keyword_retriever = BM25Retriever.from_texts(all_docs)
+        self.keyword_retriever.k = 4
         return {"status": "success"}
