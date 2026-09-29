@@ -1,4 +1,7 @@
 import os
+import json
+import io
+from pypdf import PdfReader
 from operator import itemgetter
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import HuggingFaceEmbeddings
@@ -111,3 +114,44 @@ Answer:
         self.keyword_retriever = BM25Retriever.from_texts(all_docs)
         self.keyword_retriever.k = 4
         return {"status": "success"}
+
+    async def ingest_file_stream(self, file_content: bytes, filename: str):
+        yield json.dumps({"step": "upload", "status": "Saving file...", "progress": 10})
+
+        text = ""
+
+        if file_content.startswith(b"%PDF-"):
+            yield json.dumps({"step": "parse", "status": "Extracting text from PDF...", "progress": 30})
+            try:
+                pdf_reader = PdfReader(io.BytesIO(file_content))
+                for page in pdf_reader.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text += page_text + "\n"
+            except Exception:
+                yield json.dumps({"step": "error", "status": "Corrupted or invalid PDF file.", "progress": 0})
+
+        else:
+            yield json.dumps({"step": "parse", "status": "Reading text file...", "progress": 30})
+            try:
+                text = file_content.decode("utf-8")
+            except UnicodeDecodeError:
+                yield json.dumps({"step": "error", "status": "File encoding is not valid UTF-8 and is not a valid PDF.", "progress": 0})
+                return
+
+        if not text.strip():
+            yield json.dumps({"step": "error", "status": "No readable text found in the file", "progress": 0})
+            return
+
+        yield json.dumps({"step": "chunk", "status": "Splitting text into chunks...", "progress": 50})
+        chunks = self.text_splitter.split_text(text)
+
+        yield json.dumps({"step": "embed", "status": "Generating vectors and updating BM25...", "progress": 80})
+        self.vectorstore.add_texts(texts=chunks)
+
+        all_docs = self.vectorstore.get()["documents"]
+        self.keyword_retriever = BM25Retriever.from_texts(all_docs)
+        self.keyword_retriever.k = 4
+
+        yield json.dumps({"step": "complete", "status": "Ingestion successful!", "progress": 100})
+                
